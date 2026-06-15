@@ -1,6 +1,6 @@
 'use client'
 
-import { Trash2, Edit2 } from 'lucide-react'
+import { Trash2, Edit2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export interface ColumnConfig {
@@ -13,6 +13,7 @@ export interface ColumnConfig {
 interface DataTableProps {
   columns: ColumnConfig[]
   data: any[]
+  onView?: (row: any) => void
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
   actions?: boolean
@@ -21,6 +22,7 @@ interface DataTableProps {
 export function DataTable({
   columns,
   data,
+  onView,
   onEdit,
   onDelete,
   actions = true,
@@ -61,6 +63,16 @@ export function DataTable({
               {actions && (
                 <td className="px-6 py-4 text-sm">
                   <div className="flex gap-2">
+                    {onView && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onView(row)}
+                        aria-label="View"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    )}
                     {onEdit && (
                       <Button
                         variant="ghost"

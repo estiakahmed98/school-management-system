@@ -11,6 +11,7 @@ interface CrudPageLayoutProps {
   description?: string
   columns: ColumnConfig[]
   data: any[]
+  onView?: (row: any) => void
   onAdd?: () => void
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
@@ -24,6 +25,7 @@ export function CrudPageLayout({
   description,
   columns,
   data,
+  onView,
   onAdd,
   onEdit,
   onDelete,
@@ -63,7 +65,7 @@ export function CrudPageLayout({
         </div>
       )}
 
-      <DataTable columns={columns} data={filteredData} onEdit={onEdit} onDelete={onDelete} />
+      <DataTable columns={columns} data={filteredData} onView={onView} onEdit={onEdit} onDelete={onDelete} />
     </div>
   )
 }
