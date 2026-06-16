@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { LucideIcon, ChevronDown } from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
 import { useState } from 'react'
@@ -23,6 +23,7 @@ export function AppSidebar({ items, logo }: AppSidebarProps) {
   const pathname = usePathname()
   const { hasPermission } = useAuth()
   const [expandedItems, setExpandedItems] = useState<string[]>([])
+  const cleanPathname = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/'
 
   const toggleExpand = (title: string) => {
     setExpandedItems(prev =>
@@ -32,9 +33,19 @@ export function AppSidebar({ items, logo }: AppSidebarProps) {
 
   const isActive = (href?: string) => {
     if (!href) return false
-    // Remove locale prefix for comparison
-    const cleanPathname = pathname.replace(/^\/[a-z]{2}/, '')
-    return cleanPathname.startsWith(href)
+    if (href === '/dashboard') {
+      return cleanPathname === href
+    }
+
+    return cleanPathname === href || cleanPathname.startsWith(`${href}/`)
+  }
+
+  const hasActiveDescendant = (item: SidebarItem): boolean => {
+    if (isActive(item.href)) {
+      return true
+    }
+
+    return (item.children ?? []).some(child => hasActiveDescendant(child))
   }
 
   const isItemVisible = (item: SidebarItem) => {
@@ -42,12 +53,13 @@ export function AppSidebar({ items, logo }: AppSidebarProps) {
     return hasPermission(item.permission)
   }
 
-  const renderItem = (item: SidebarItem, depth = 0) => {
+  const renderItem = (item: SidebarItem) => {
     if (!isItemVisible(item)) return null
 
     const Icon = item.icon
     const hasChildren = item.children && item.children.length > 0
-    const isExpanded = expandedItems.includes(item.title)
+    const isCurrentSection = hasActiveDescendant(item)
+    const isExpanded = expandedItems.includes(item.title) || isCurrentSection
 
     if (hasChildren) {
       return (
@@ -55,7 +67,11 @@ export function AppSidebar({ items, logo }: AppSidebarProps) {
           <button
             onClick={() => toggleExpand(item.title)}
             className={`w-full flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-              isExpanded ? 'bg-sidebar-accent' : 'hover:bg-sidebar-accent/50'
+              isCurrentSection
+                ? 'bg-sidebar-accent text-sidebar-foreground font-medium'
+                : isExpanded
+                  ? 'bg-sidebar-accent/70 text-sidebar-foreground'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
             }`}
           >
             <Icon className="h-5 w-5 flex-shrink-0" />
@@ -68,7 +84,7 @@ export function AppSidebar({ items, logo }: AppSidebarProps) {
             <div className="ml-2 border-l border-sidebar-border">
               {(item.children ?? [])
                 .filter(isItemVisible)
-                .map(child => renderItem(child, depth + 1))}
+                .map(child => renderItem(child))}
             </div>
           )}
         </div>
