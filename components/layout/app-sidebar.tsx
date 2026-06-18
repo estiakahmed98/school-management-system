@@ -2,24 +2,68 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LucideIcon, ChevronDown } from 'lucide-react'
+import {
+  BarChart3,
+  BookOpen,
+  Briefcase,
+  Bus,
+  Calendar,
+  ChevronDown,
+  Clock,
+  DollarSign,
+  FileText,
+  GraduationCap,
+  Home,
+  LayoutGrid,
+  LucideIcon,
+  MessageSquare,
+  Package,
+  ReceiptText,
+  Settings,
+  Users,
+  X,
+} from 'lucide-react'
 import { useAuth } from '@/lib/auth/context'
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 
-export interface SidebarItem {
+const sidebarIcons = {
+  layoutGrid: LayoutGrid,
+  users: Users,
+  bookOpen: BookOpen,
+  fileText: FileText,
+  dollarSign: DollarSign,
+  package: Package,
+  bus: Bus,
+  messageSquare: MessageSquare,
+  settings: Settings,
+  barChart3: BarChart3,
+  calendar: Calendar,
+  graduationCap: GraduationCap,
+  home: Home,
+  clock: Clock,
+  receiptText: ReceiptText,
+  briefcase: Briefcase,
+} as const
+
+export type SidebarIconKey = keyof typeof sidebarIcons
+
+export interface SidebarItemData {
   title: string
   href?: string
-  icon: LucideIcon
+  icon: SidebarIconKey
   permission?: string
-  children?: SidebarItem[]
+  children?: SidebarItemData[]
 }
 
 interface AppSidebarProps {
-  items: SidebarItem[]
+  items: SidebarItemData[]
   logo?: React.ReactNode
+  isOpen: boolean
+  onClose: () => void
 }
 
-export function AppSidebar({ items, logo }: AppSidebarProps) {
+export function AppSidebar({ items, logo, isOpen, onClose }: AppSidebarProps) {
   const pathname = usePathname()
   const { hasPermission } = useAuth()
   const [expandedItems, setExpandedItems] = useState<string[]>([])
@@ -40,7 +84,7 @@ export function AppSidebar({ items, logo }: AppSidebarProps) {
     return cleanPathname === href || cleanPathname.startsWith(`${href}/`)
   }
 
-  const hasActiveDescendant = (item: SidebarItem): boolean => {
+  const hasActiveDescendant = (item: SidebarItemData): boolean => {
     if (isActive(item.href)) {
       return true
     }
@@ -48,15 +92,15 @@ export function AppSidebar({ items, logo }: AppSidebarProps) {
     return (item.children ?? []).some(child => hasActiveDescendant(child))
   }
 
-  const isItemVisible = (item: SidebarItem) => {
+  const isItemVisible = (item: SidebarItemData) => {
     if (!item.permission) return true
     return hasPermission(item.permission)
   }
 
-  const renderItem = (item: SidebarItem) => {
+  const renderItem = (item: SidebarItemData) => {
     if (!isItemVisible(item)) return null
 
-    const Icon = item.icon
+    const Icon: LucideIcon = sidebarIcons[item.icon]
     const hasChildren = item.children && item.children.length > 0
     const isCurrentSection = hasActiveDescendant(item)
     const isExpanded = expandedItems.includes(item.title) || isCurrentSection
@@ -95,6 +139,7 @@ export function AppSidebar({ items, logo }: AppSidebarProps) {
       <Link
         key={item.title}
         href={item.href || '#'}
+        onClick={onClose}
         className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
           isActive(item.href)
             ? 'bg-sidebar-primary text-sidebar-primary-foreground font-medium'
@@ -108,14 +153,28 @@ export function AppSidebar({ items, logo }: AppSidebarProps) {
   }
 
   return (
-    <aside className="w-64 bg-sidebar border-r border-sidebar-border h-screen overflow-y-auto flex flex-col">
-      {/* Logo */}
-      {logo && <div className="p-6 border-b border-sidebar-border">{logo}</div>}
-
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
-        {items.map(item => renderItem(item))}
-      </nav>
-    </aside>
+    <>
+      <div
+        className={`fixed inset-0 z-40 bg-black/40 transition-opacity md:hidden ${
+          isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        onClick={onClose}
+      />
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar transition-transform md:static md:z-auto md:w-64 md:translate-x-0 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex items-center justify-between border-b border-sidebar-border p-6 md:block">
+          {logo}
+          <Button type="button" variant="ghost" size="icon-sm" className="md:hidden" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <nav className="flex-1 p-4 space-y-2">
+          {items.map(item => renderItem(item))}
+        </nav>
+      </aside>
+    </>
   )
 }

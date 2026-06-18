@@ -84,6 +84,7 @@ async function seedUsersAndAcademics() {
     where: { email: 'admin@school.com' },
     update: {
       name: 'Super Admin',
+      passwordHash: 'admin123',
       roleId: superAdminRole.id,
       status: 'ACTIVE',
     },
@@ -91,7 +92,7 @@ async function seedUsersAndAcademics() {
       name: 'Super Admin',
       email: 'admin@school.com',
       phone: '01700000000',
-      passwordHash: 'change-me',
+      passwordHash: 'admin123',
       status: 'ACTIVE',
       roleId: superAdminRole.id,
     },

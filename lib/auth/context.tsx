@@ -1,31 +1,15 @@
 'use client'
 
-import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react'
+import React, { createContext, useContext, ReactNode } from 'react'
+import { useSession } from 'next-auth/react'
 import type { AuthContextType, User } from './types'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const response = await fetch('/api/auth/me')
-        const payload = await response.json()
-        if (payload.success) {
-          setUser(payload.data)
-        }
-      } catch (error) {
-        console.error('Failed to load current user', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    void loadUser()
-  }, [])
+  const { data: session, status } = useSession()
+  const user = (session?.user as User | undefined) ?? null
+  const isLoading = status === 'loading'
 
   const hasPermission = (permission: string): boolean => {
     if (!user) return false

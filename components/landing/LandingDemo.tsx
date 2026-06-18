@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useLocale } from "next-intl";
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   motion,
@@ -528,6 +530,7 @@ const HeroDashboard = () => {
 
 // ─── Navbar ──────────────────────────────────────────────────────────────────
 const Navbar = () => {
+  const locale = useLocale();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -580,9 +583,12 @@ const Navbar = () => {
 
         {/* CTA */}
         <div className="hidden md:flex items-center gap-3">
-          <button className="text-sm text-gray-300 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-white/5 font-medium">
+          <Link
+            href={`/${locale}/login`}
+            className="text-sm text-gray-300 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-white/5 font-medium"
+          >
             Sign In
-          </button>
+          </Link>
           <motion.button
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.97 }}
@@ -631,9 +637,13 @@ const Navbar = () => {
                 className="flex gap-3 pt-2 border-t"
                 style={{ borderColor: "rgba(255,255,255,0.06)" }}
               >
-                <button className="flex-1 text-sm border border-gray-700 rounded-lg py-2 text-gray-300 hover:text-white font-medium">
+                <Link
+                  href={`/${locale}/login`}
+                  className="flex-1 text-center text-sm border border-gray-700 rounded-lg py-2 text-gray-300 hover:text-white font-medium"
+                  onClick={() => setMobileOpen(false)}
+                >
                   Sign In
-                </button>
+                </Link>
                 <button
                   className="flex-1 text-sm rounded-lg py-2 text-white font-semibold"
                   style={{
@@ -2056,7 +2066,7 @@ const ParentPortal = () => {
                         <div className="flex gap-1.5">
                           {["M", "T", "W", "T", "F"].map((d, i) => (
                             <div
-                              key={d}
+                              key={`${d}-${i}`}
                               className="flex-1 rounded-lg p-2 text-center"
                               style={{
                                 background:

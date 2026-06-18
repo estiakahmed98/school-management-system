@@ -31,9 +31,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
       try {
         const response = await fetch("/api/theme-settings");
-        const payload = await response.json();
+        const contentType = response.headers.get("content-type") || "";
+        const payload = contentType.includes("application/json")
+          ? await response.json()
+          : null;
 
-        if (payload.success) {
+        if (response.ok && payload?.success) {
           applyThemeVariables(payload.data as Record<string, string>);
           const databaseTheme = payload.data.mode === "dark" ? "dark" : "light";
           const initialTheme =

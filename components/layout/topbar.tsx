@@ -1,22 +1,37 @@
 'use client'
 
 import { ReactNode } from 'react'
+import { useLocale } from 'next-intl'
+import { useRouter } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 import { useAuth } from '@/lib/auth/context'
 import { ThemeToggle } from '@/components/common/theme-toggle'
 import { LanguageSwitcher } from '@/components/common/language-switcher'
-import { LogOut, User } from 'lucide-react'
+import { LogOut, Menu, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface TopbarProps {
   logo?: ReactNode
+  onMenuClick: () => void
 }
 
-export function Topbar({ logo }: TopbarProps) {
+export function Topbar({ logo, onMenuClick }: TopbarProps) {
   const { user } = useAuth()
+  const locale = useLocale()
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    await signOut({ redirect: false })
+    router.replace(`/${locale}/login`)
+    router.refresh()
+  }
 
   return (
     <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-50">
       <div className="flex items-center gap-4">
+        <Button type="button" variant="ghost" size="icon-sm" className="md:hidden" onClick={onMenuClick}>
+          <Menu className="h-4 w-4" />
+        </Button>
         {logo && <div className="flex items-center">{logo}</div>}
         <div>
           <p className="text-sm text-muted-foreground">Welcome back</p>
@@ -36,6 +51,10 @@ export function Topbar({ logo }: TopbarProps) {
             <p className="text-xs text-muted-foreground">{user?.role}</p>
           </div>
         </div>
+        <Button type="button" variant="outline" size="sm" onClick={handleLogout}>
+          <LogOut className="h-4 w-4" />
+          Logout
+        </Button>
       </div>
     </header>
   )
