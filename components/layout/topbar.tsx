@@ -3,7 +3,6 @@
 import { ReactNode } from 'react'
 import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
-import { signOut } from 'next-auth/react'
 import { useAuth } from '@/lib/auth/context'
 import { ThemeToggle } from '@/components/common/theme-toggle'
 import { LanguageSwitcher } from '@/components/common/language-switcher'
@@ -21,7 +20,10 @@ export function Topbar({ logo, onMenuClick }: TopbarProps) {
   const router = useRouter()
 
   const handleLogout = async () => {
-    await signOut({ redirect: false })
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+    })
     router.replace(`/${locale}/login`)
     router.refresh()
   }

@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
-import { SessionProvider } from "next-auth/react";
 import { AuthProvider } from "@/lib/auth/context";
 import { ThemeProvider } from "@/lib/theme/context";
 import "./globals.css";
@@ -67,14 +66,12 @@ export default async function RootLayout({
     >
       <body className="font-sans antialiased bg-background text-foreground">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <SessionProvider>
-            <AuthProvider>
-              <ThemeProvider>
-                {children}
-                {process.env.NODE_ENV === "production" && <Analytics />}
-              </ThemeProvider>
-            </AuthProvider>
-          </SessionProvider>
+          <AuthProvider>
+            <ThemeProvider>
+              {children}
+              {process.env.NODE_ENV === "production" && <Analytics />}
+            </ThemeProvider>
+          </AuthProvider>
         </NextIntlClientProvider>
       </body>
     </html>

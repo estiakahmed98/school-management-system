@@ -4,7 +4,6 @@ import { FormEvent, useState } from 'react'
 import Link from 'next/link'
 import { useLocale } from 'next-intl'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { GraduationCap, KeyRound, Mail } from 'lucide-react'
 
@@ -25,14 +24,22 @@ export default function LoginPage() {
     setIsSubmitting(true)
 
     try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          email,
+          password,
+        }),
       })
 
-      if (!result || result.error) {
-        throw new Error('Invalid email or password')
+      const result = await response.json()
+
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.message || 'Invalid email or password')
       }
 
       router.replace(redirectTo)
