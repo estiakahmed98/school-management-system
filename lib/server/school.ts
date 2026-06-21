@@ -16,6 +16,8 @@ import type {
   Fee,
   Homework,
   Inventory,
+  LessonPlan,
+  Lecture,
   Parent,
   Payroll,
   Result,
@@ -276,6 +278,13 @@ async function findOrCreateParentByName(payload: {
       },
     },
     include: { user: true, students: true },
+  })
+}
+
+async function findStudentByName(name: string) {
+  return prisma.student.findFirst({
+    where: { user: { name } },
+    include: { user: true, class: true, section: true },
   })
 }
 
@@ -566,6 +575,50 @@ function mapHomework(record: {
     class: record.class.name,
     subject: record.subject.name,
     dueDate: toIsoDate(record.dueDate),
+  }
+}
+
+function mapLessonPlan(record: {
+  id: string
+  title: string
+  description: string | null
+  date: Date | null
+  class: { name: string }
+  subject: { name: string }
+  teacher: { user: { name: string } }
+}): LessonPlan {
+  return {
+    id: record.id,
+    title: record.title,
+    description: record.description ?? '',
+    class: record.class.name,
+    subject: record.subject.name,
+    teacher: record.teacher.user.name,
+    date: toIsoDate(record.date),
+  }
+}
+
+function mapLecture(record: {
+  id: string
+  title: string
+  description: string | null
+  date: Date | null
+  class: { name: string }
+  section: { name: string } | null
+  subject: { name: string }
+  teacher: { user: { name: string } }
+  student: { user: { name: string } } | null
+}): Lecture {
+  return {
+    id: record.id,
+    title: record.title,
+    description: record.description ?? '',
+    class: record.class.name,
+    section: record.section?.name ?? '',
+    subject: record.subject.name,
+    teacher: record.teacher.user.name,
+    student: record.student?.user.name ?? '',
+    date: toIsoDate(record.date),
   }
 }
 
@@ -2020,6 +2073,214 @@ export const homeworkService = simpleCrud<Homework>({
   },
   remove: async id => {
     await prisma.homework.delete({ where: { id } })
+  },
+})
+
+export const lessonPlanService = simpleCrud<LessonPlan>({
+  resourceName: 'Lesson plan',
+  list: async () =>
+    (
+      await prisma.lessonPlan.findMany({
+        include: { class: true, subject: true, teacher: { include: { user: true } } },
+        orderBy: { date: 'asc' },
+      })
+    ).map(mapLessonPlan),
+  get: async id => {
+    const record = await prisma.lessonPlan.findUnique({
+      where: { id },
+      include: { class: true, subject: true, teacher: { include: { user: true } } },
+    })
+    return record ? mapLessonPlan(record) : null
+  },
+  create: async data => {
+    const classRecord = await findOrCreateClass(getString(data, 'class'))
+    const teacher = await findOrCreateTeacherByName(getString(data, 'teacher'))
+    const subject = await findOrCreateSubject(getString(data, 'subject'), classRecord.id, teacher.id)
+
+    const record = await prisma.lessonPlan.create({
+      data: {
+        title: getString(data, 'title'),
+        description: getString(data, 'description', { required: false, defaultValue: '' }),
+        classId: classRecord.id,
+        subjectId: subject.id,
+        teacherId: teacher.id,
+        date: getDateString(data, 'date'),
+      },
+      include: { class: true, subject: true, teacher: { include: { user: true } } },
+    })
+
+    return mapLessonPlan(record)
+  },
+  update: async (id, data) => {
+    const current = await prisma.lessonPlan.findUnique({
+      where: { id },
+      include: { class: true, subject: true, teacher: { include: { user: true } } },
+    })
+
+    if (!current) {
+      throw new ApiError(404, 'Lesson plan not found')
+    }
+
+    const classRecord = await findOrCreateClass(
+      getString(data, 'class', { required: false, defaultValue: current.class.name })
+    )
+    const teacher = await findOrCreateTeacherByName(
+      getString(data, 'teacher', { required: false, defaultValue: current.teacher.user.name })
+    )
+    const subject = await findOrCreateSubject(
+      getString(data, 'subject', { required: false, defaultValue: current.subject.name }),
+      classRecord.id,
+      teacher.id
+    )
+
+    const record = await prisma.lessonPlan.update({
+      where: { id },
+      data: {
+        title: getString(data, 'title', { required: false, defaultValue: current.title }),
+        description: getString(data, 'description', {
+          required: false,
+          defaultValue: current.description ?? '',
+        }),
+        classId: classRecord.id,
+        subjectId: subject.id,
+        teacherId: teacher.id,
+        date: getDateString(data, 'date', current.date ?? new Date()),
+      },
+      include: { class: true, subject: true, teacher: { include: { user: true } } },
+    })
+
+    return mapLessonPlan(record)
+  },
+  remove: async id => {
+    await prisma.lessonPlan.delete({ where: { id } })
+  },
+})
+
+export const lectureService = simpleCrud<Lecture>({
+  resourceName: 'Lecture',
+  list: async () =>
+    (
+      await prisma.lecture.findMany({
+        include: {
+          class: true,
+          section: true,
+          subject: true,
+          teacher: { include: { user: true } },
+          student: { include: { user: true } },
+        },
+        orderBy: { date: 'asc' },
+      })
+    ).map(mapLecture),
+  get: async id => {
+    const record = await prisma.lecture.findUnique({
+      where: { id },
+      include: {
+        class: true,
+        section: true,
+        subject: true,
+        teacher: { include: { user: true } },
+        student: { include: { user: true } },
+      },
+    })
+    return record ? mapLecture(record) : null
+  },
+  create: async data => {
+    const classRecord = await findOrCreateClass(getString(data, 'class'))
+    const sectionName = getString(data, 'section', { required: false, defaultValue: '' })
+    const section = sectionName ? await findOrCreateSection(classRecord.id, sectionName) : null
+    const teacher = await findOrCreateTeacherByName(getString(data, 'teacher'))
+    const subject = await findOrCreateSubject(getString(data, 'subject'), classRecord.id, teacher.id)
+    const studentName = getString(data, 'student', { required: false, defaultValue: '' })
+    const student = studentName ? await findStudentByName(studentName) : null
+
+    const record = await prisma.lecture.create({
+      data: {
+        title: getString(data, 'title'),
+        description: getString(data, 'description', { required: false, defaultValue: '' }),
+        classId: classRecord.id,
+        sectionId: section?.id ?? null,
+        subjectId: subject.id,
+        teacherId: teacher.id,
+        studentId: student?.id ?? null,
+        date: getDateString(data, 'date'),
+      },
+      include: {
+        class: true,
+        section: true,
+        subject: true,
+        teacher: { include: { user: true } },
+        student: { include: { user: true } },
+      },
+    })
+
+    return mapLecture(record)
+  },
+  update: async (id, data) => {
+    const current = await prisma.lecture.findUnique({
+      where: { id },
+      include: {
+        class: true,
+        section: true,
+        subject: true,
+        teacher: { include: { user: true } },
+        student: { include: { user: true } },
+      },
+    })
+
+    if (!current) {
+      throw new ApiError(404, 'Lecture not found')
+    }
+
+    const classRecord = await findOrCreateClass(
+      getString(data, 'class', { required: false, defaultValue: current.class.name })
+    )
+    const sectionName = getString(data, 'section', {
+      required: false,
+      defaultValue: current.section?.name ?? '',
+    })
+    const section = sectionName ? await findOrCreateSection(classRecord.id, sectionName) : null
+    const teacher = await findOrCreateTeacherByName(
+      getString(data, 'teacher', { required: false, defaultValue: current.teacher.user.name })
+    )
+    const subject = await findOrCreateSubject(
+      getString(data, 'subject', { required: false, defaultValue: current.subject.name }),
+      classRecord.id,
+      teacher.id
+    )
+    const studentName = getString(data, 'student', {
+      required: false,
+      defaultValue: current.student?.user.name ?? '',
+    })
+    const student = studentName ? await findStudentByName(studentName) : null
+
+    const record = await prisma.lecture.update({
+      where: { id },
+      data: {
+        title: getString(data, 'title', { required: false, defaultValue: current.title }),
+        description: getString(data, 'description', {
+          required: false,
+          defaultValue: current.description ?? '',
+        }),
+        classId: classRecord.id,
+        sectionId: section?.id ?? null,
+        subjectId: subject.id,
+        teacherId: teacher.id,
+        studentId: student?.id ?? null,
+        date: getDateString(data, 'date', current.date ?? new Date()),
+      },
+      include: {
+        class: true,
+        section: true,
+        subject: true,
+        teacher: { include: { user: true } },
+        student: { include: { user: true } },
+      },
+    })
+
+    return mapLecture(record)
+  },
+  remove: async id => {
+    await prisma.lecture.delete({ where: { id } })
   },
 })
 

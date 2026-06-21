@@ -151,6 +151,28 @@ export interface Homework {
   dueDate: string
 }
 
+export interface LessonPlan {
+  id: string
+  title: string
+  description: string
+  class: string
+  subject: string
+  teacher: string
+  date: string
+}
+
+export interface Lecture {
+  id: string
+  title: string
+  description: string
+  class: string
+  section: string
+  subject: string
+  teacher: string
+  student: string
+  date: string
+}
+
 export interface SmsLog {
   id: string
   receiver: string
