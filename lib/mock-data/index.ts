@@ -181,3 +181,18 @@ export interface SmsLog {
   status: string
   createdAt: string
 }
+
+export interface Admission {
+  id: string
+  studentName: string
+  email: string
+  phone: string
+  className: string
+  classId: string
+  status: 'pending' | 'approved' | 'rejected'
+  note: string
+  parentName?: string
+  studentUserName?: string
+  createdAt: string
+  updatedAt: string
+}

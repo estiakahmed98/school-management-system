@@ -165,7 +165,7 @@ export const sidebarConfig: SidebarItemData[] = [
         title: 'Admission',
         href: '/dashboard/admission',
         icon: 'users',
-        permission: PERMISSIONS.STUDENT_VIEW,
+        permission: PERMISSIONS.ADMISSION_VIEW,
       },
     ],
   },

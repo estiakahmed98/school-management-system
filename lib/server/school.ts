@@ -1,5 +1,6 @@
 import {
   AttendanceStatus,
+  AdmissionStatus,
   EmployeeType,
   FeeStatus,
   PayrollStatus,
@@ -22,6 +23,7 @@ import type {
   Payroll,
   Result,
   Section,
+  Admission,
   SmsLog,
   Staff,
   Student,
@@ -60,6 +62,10 @@ function toPayrollStatus(value: string) {
 
 function toThemeMode(value: string) {
   return value.toUpperCase() as ThemeMode
+}
+
+function toAdmissionStatus(value: string) {
+  return value.toUpperCase() as AdmissionStatus
 }
 
 function getString(
@@ -637,6 +643,35 @@ function mapSms(record: {
     type: record.type,
     status: record.status,
     createdAt: record.createdAt.toISOString(),
+  }
+}
+
+function mapAdmission(record: {
+  id: string
+  studentName: string
+  email: string
+  phone: string | null
+  status: AdmissionStatus
+  note: string | null
+  createdAt: Date
+  updatedAt: Date
+  class: { id: string; name: string } | null
+  parent: { user: { name: string } } | null
+  student: { user: { name: string } } | null
+}): Admission {
+  return {
+    id: record.id,
+    studentName: record.studentName,
+    email: record.email,
+    phone: record.phone ?? '',
+    className: record.class?.name ?? '',
+    classId: record.class?.id ?? '',
+    status: record.status.toLowerCase() as Admission['status'],
+    note: record.note ?? '',
+    parentName: record.parent?.user.name,
+    studentUserName: record.student?.user.name,
+    createdAt: record.createdAt.toISOString(),
+    updatedAt: record.updatedAt.toISOString(),
   }
 }
 
@@ -2320,6 +2355,157 @@ export const smsService = simpleCrud<SmsLog>({
   },
   remove: async id => {
     await prisma.smsLog.delete({ where: { id } })
+  },
+})
+
+export const admissionService = simpleCrud<Admission>({
+  resourceName: 'Admission application',
+  list: async () =>
+    (
+      await prisma.admission.findMany({
+        include: {
+          class: true,
+          parent: { include: { user: true } },
+          student: { include: { user: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    ).map(mapAdmission),
+  get: async id => {
+    const record = await prisma.admission.findUnique({
+      where: { id },
+      include: {
+        class: true,
+        parent: { include: { user: true } },
+        student: { include: { user: true } },
+      },
+    })
+
+    if (!record) {
+      throw new ApiError(404, 'Admission application not found')
+    }
+
+    return mapAdmission(record)
+  },
+  create: async input => {
+    const data = asRecord(input)
+    const classId = getString(data, 'classId')
+    const classRecord = await prisma.class.findUnique({ where: { id: classId } })
+
+    if (!classRecord) {
+      throw new ApiError(404, 'Selected class not found')
+    }
+
+    const parentId = getOptionalString(data, 'parentId')
+    if (parentId) {
+      const parent = await prisma.parent.findUnique({ where: { id: parentId } })
+      if (!parent) {
+        throw new ApiError(404, 'Parent not found')
+      }
+    }
+
+    const studentId = getOptionalString(data, 'studentId')
+    if (studentId) {
+      const student = await prisma.student.findUnique({ where: { id: studentId } })
+      if (!student) {
+        throw new ApiError(404, 'Student not found')
+      }
+    }
+
+    const record = await prisma.admission.create({
+      data: {
+        studentName: getString(data, 'studentName'),
+        email: getString(data, 'email'),
+        phone: getOptionalString(data, 'phone'),
+        classId: classRecord.id,
+        parentId,
+        studentId,
+        status: toAdmissionStatus(getString(data, 'status', { required: false, defaultValue: 'pending' })),
+        note: getString(data, 'note', { required: false, defaultValue: '' }),
+      },
+      include: {
+        class: true,
+        parent: { include: { user: true } },
+        student: { include: { user: true } },
+      },
+    })
+
+    return mapAdmission(record)
+  },
+  update: async (id, input) => {
+    const current = await prisma.admission.findUnique({
+      where: { id },
+      include: {
+        class: true,
+        parent: { include: { user: true } },
+        student: { include: { user: true } },
+      },
+    })
+
+    if (!current) {
+      throw new ApiError(404, 'Admission application not found')
+    }
+
+    const data = asRecord(input)
+    const classId = getString(data, 'classId', { required: false, defaultValue: current.class?.id ?? '' })
+    let nextClassId = current.classId
+
+    if (classId) {
+      const classRecord = await prisma.class.findUnique({ where: { id: classId } })
+      if (!classRecord) {
+        throw new ApiError(404, 'Selected class not found')
+      }
+      nextClassId = classRecord.id
+    }
+
+    const parentId = getOptionalString(data, 'parentId')
+    if (parentId !== null) {
+      if (parentId) {
+        const parent = await prisma.parent.findUnique({ where: { id: parentId } })
+        if (!parent) {
+          throw new ApiError(404, 'Parent not found')
+        }
+      }
+    }
+
+    const studentId = getOptionalString(data, 'studentId')
+    if (studentId !== null) {
+      if (studentId) {
+        const student = await prisma.student.findUnique({ where: { id: studentId } })
+        if (!student) {
+          throw new ApiError(404, 'Student not found')
+        }
+      }
+    }
+
+    const record = await prisma.admission.update({
+      where: { id },
+      data: {
+        studentName: getString(data, 'studentName', { required: false, defaultValue: current.studentName }),
+        email: getString(data, 'email', { required: false, defaultValue: current.email }),
+        phone: getOptionalString(data, 'phone') ?? current.phone,
+        classId: nextClassId,
+        parentId: parentId !== null ? parentId : current.parentId,
+        studentId: studentId !== null ? studentId : current.studentId,
+        status: toAdmissionStatus(
+          getString(data, 'status', {
+            required: false,
+            defaultValue: current.status.toLowerCase(),
+          })
+        ),
+        note: getString(data, 'note', { required: false, defaultValue: current.note ?? '' }),
+      },
+      include: {
+        class: true,
+        parent: { include: { user: true } },
+        student: { include: { user: true } },
+      },
+    })
+
+    return mapAdmission(record)
+  },
+  remove: async id => {
+    await prisma.admission.delete({ where: { id } })
   },
 })
 

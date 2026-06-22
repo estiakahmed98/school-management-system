@@ -3,15 +3,20 @@
 import { ReactNode, useState } from 'react'
 import { AppSidebar, SidebarItemData } from '@/components/layout/app-sidebar'
 import { Topbar } from '@/components/layout/topbar'
+import type { NotificationPreview } from '@/components/layout/topbar'
 
 interface DashboardLayoutProps {
   children: ReactNode
   sidebarItems: SidebarItemData[]
+  notificationCount?: number
+  notifications?: NotificationPreview[]
 }
 
 export function DashboardLayout({
   children,
   sidebarItems,
+  notificationCount = 0,
+  notifications = [],
 }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const logo = (
@@ -35,7 +40,12 @@ export function DashboardLayout({
         onClose={() => setIsSidebarOpen(false)}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Topbar logo={logo} onMenuClick={() => setIsSidebarOpen(true)} />
+        <Topbar
+          logo={logo}
+          onMenuClick={() => setIsSidebarOpen(true)}
+          notificationCount={notificationCount}
+          notifications={notifications}
+        />
         <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>

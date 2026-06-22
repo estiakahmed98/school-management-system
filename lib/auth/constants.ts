@@ -91,6 +91,12 @@ export const PERMISSIONS = {
   HOMEWORK_EDIT: 'homework.update',
   HOMEWORK_DELETE: 'homework.delete',
 
+  // Admission Permissions
+  ADMISSION_VIEW: 'admission.view',
+  ADMISSION_CREATE: 'admission.create',
+  ADMISSION_EDIT: 'admission.update',
+  ADMISSION_DELETE: 'admission.delete',
+
   // SMS Permissions
   SMS_VIEW: 'sms.view',
   SMS_CREATE: 'sms.create',
