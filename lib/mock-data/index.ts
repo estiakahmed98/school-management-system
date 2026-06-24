@@ -6,6 +6,7 @@ export interface Student {
   rollNumber: string
   class: string
   section: string
+  parentId: string
   parentName: string
   phone: string
   email: string
@@ -43,6 +44,13 @@ export interface Parent {
   occupation: string
   address: string
   children: number
+  linkedStudents: Array<{
+    id: string
+    name: string
+    rollNumber: string
+    class: string
+    section: string
+  }>
 }
 
 export interface Class {

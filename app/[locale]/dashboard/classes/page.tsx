@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, ReactNode, useEffect, useState } from 'react'
+import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { CrudPageLayout } from '@/components/crud/crud-page-layout'
 import { ColumnConfig } from '@/components/data-table/data-table'
@@ -9,7 +9,7 @@ import { PermissionGuard } from '@/components/common/permission-guard'
 import { PERMISSIONS } from '@/lib/auth/constants'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import type { Class } from '@/lib/mock-data'
+import type { Class, Teacher } from '@/lib/mock-data'
 
 type ClassFormValues = {
   name: string
@@ -30,6 +30,7 @@ const emptyForm: ClassFormValues = {
 export default function ClassesPage() {
   const t = useTranslations()
   const [classes, setClasses] = useState<Class[]>([])
+  const [teachers, setTeachers] = useState<Teacher[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -48,14 +49,23 @@ export default function ClassesPage() {
     setError(null)
 
     try {
-      const res = await fetch('/api/classes', { cache: 'no-store' })
-      const data = await res.json()
+      const [classesRes, teachersRes] = await Promise.all([
+        fetch('/api/classes', { cache: 'no-store' }),
+        fetch('/api/teachers', { cache: 'no-store' }),
+      ])
 
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || t('common.error'))
+      const [classesData, teachersData] = await Promise.all([classesRes.json(), teachersRes.json()])
+
+      if (!classesRes.ok || !classesData.success) {
+        throw new Error(classesData.message || t('common.error'))
       }
 
-      setClasses(data.data)
+      if (!teachersRes.ok || !teachersData.success) {
+        throw new Error(teachersData.message || t('common.error'))
+      }
+
+      setClasses(classesData.data)
+      setTeachers(teachersData.data)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.error'))
     } finally {
@@ -177,6 +187,11 @@ export default function ClassesPage() {
     { key: 'room', label: 'Room' },
   ]
 
+  const teacherOptions = useMemo(
+    () => Array.from(new Set(teachers.map(item => item.name).filter(Boolean))).sort(),
+    [teachers]
+  )
+
   if (loading) return <LoadingState />
 
   return (
@@ -201,6 +216,7 @@ export default function ClassesPage() {
           isSubmitting={isSubmitting}
           isEdit={Boolean(selectedClass)}
           values={formValues}
+          teacherOptions={teacherOptions}
           title={selectedClass ? 'Edit Class' : 'Add Class'}
           onClose={closeFormModal}
           onSubmit={handleSubmit}
@@ -250,6 +266,7 @@ function ClassFormModal({
   isSubmitting,
   isEdit,
   values,
+  teacherOptions,
   title,
   onClose,
   onSubmit,
@@ -260,6 +277,7 @@ function ClassFormModal({
   isSubmitting: boolean
   isEdit: boolean
   values: ClassFormValues
+  teacherOptions: string[]
   title: string
   onClose: () => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
@@ -274,7 +292,12 @@ function ClassFormModal({
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Class Name" value={values.name} onChange={value => onChange('name', value)} required />
           <Field label={t('students.section')} value={values.section} onChange={value => onChange('section', value)} required />
-          <Field label="Class Teacher" value={values.classTeacher} onChange={value => onChange('classTeacher', value)} />
+          <SelectField
+            label="Class Teacher"
+            value={values.classTeacher}
+            onChange={value => onChange('classTeacher', value)}
+            options={teacherOptions}
+          />
           <Field label="Capacity" value={values.capacity} onChange={value => onChange('capacity', value)} type="number" required />
           <Field label="Room" value={values.room} onChange={value => onChange('room', value)} />
         </div>
@@ -386,6 +409,39 @@ function Field({
         onChange={event => onChange(event.target.value)}
         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/30"
       />
+    </label>
+  )
+}
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+  required = false,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  options: string[]
+  required?: boolean
+}) {
+  return (
+    <label className="space-y-2">
+      <span className="text-sm font-medium text-foreground">{label}</span>
+      <select
+        value={value}
+        required={required}
+        onChange={event => onChange(event.target.value)}
+        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/30"
+      >
+        <option value="">Select {label.toLowerCase()}</option>
+        {options.map(option => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
     </label>
   )
 }
