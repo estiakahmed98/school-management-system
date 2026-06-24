@@ -155,6 +155,7 @@ model Teacher {
   salary       Float?
   status       UserStatus   @default(ACTIVE)
   classes      Class[]
+  sections     Section[]
   subjects     Subject[]
   lessonPlans  LessonPlan[]
   lectures     Lecture[]
@@ -215,14 +216,16 @@ model Class {
 }
 
 model Section {
-  id        String      @id @default(cuid())
-  name      String
-  classId   String
-  class     Class       @relation(fields: [classId], references: [id], onDelete: Cascade)
-  students  Student[]
-  lectures  Lecture[]
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id             String      @id @default(cuid())
+  name           String
+  classId        String
+  classTeacherId String?
+  class          Class       @relation(fields: [classId], references: [id], onDelete: Cascade)
+  classTeacher   Teacher?    @relation(fields: [classTeacherId], references: [id])
+  students       Student[]
+  lectures       Lecture[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   @@unique([name, classId])
 }

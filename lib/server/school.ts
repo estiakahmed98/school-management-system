@@ -197,7 +197,11 @@ async function findOrCreateClass(
   });
 }
 
-async function findOrCreateSection(classId: string, name: string) {
+async function findOrCreateSection(
+  classId: string,
+  name: string,
+  payload?: { classTeacherId?: string | null },
+) {
   const existing = await prisma.section.findFirst({
     where: { classId, name },
   });
@@ -207,7 +211,11 @@ async function findOrCreateSection(classId: string, name: string) {
   }
 
   return prisma.section.create({
-    data: { classId, name },
+    data: {
+      classId,
+      name,
+      classTeacherId: payload?.classTeacherId ?? null,
+    },
   });
 }
 
@@ -468,13 +476,18 @@ function mapClass(record: {
   capacity: number | null;
   room: string | null;
   classTeacher: { user: { name: string } } | null;
-  sections: { id: string; name: string }[];
+  sections: {
+    id: string;
+    name: string;
+    classTeacher: { user: { name: string } } | null;
+  }[];
 }): Class[] {
   return record.sections.map((section) => ({
     id: section.id,
     name: record.name,
     capacity: record.capacity ?? 0,
-    classTeacher: record.classTeacher?.user.name ?? "",
+    classTeacher:
+      section.classTeacher?.user.name ?? record.classTeacher?.user.name ?? "",
     room: record.room ?? "",
     section: section.name,
   }));
@@ -1610,7 +1623,11 @@ export const classService = {
     const records = await prisma.class.findMany({
       include: {
         classTeacher: { include: { user: true } },
-        sections: true,
+        sections: {
+          include: {
+            classTeacher: { include: { user: true } },
+          },
+        },
       },
       orderBy: { createdAt: "asc" },
     });
@@ -1628,6 +1645,7 @@ export const classService = {
             sections: true,
           },
         },
+        classTeacher: { include: { user: true } },
       },
     });
 
@@ -1639,7 +1657,8 @@ export const classService = {
       id: record.id,
       name: record.class.name,
       capacity: record.class.capacity ?? 0,
-      classTeacher: record.class.classTeacher?.user.name ?? "",
+      classTeacher:
+        record.classTeacher?.user.name ?? record.class.classTeacher?.user.name ?? "",
       room: record.class.room ?? "",
       section: record.name,
     };
@@ -1660,11 +1679,11 @@ export const classService = {
         defaultValue: 40,
       }),
       room: getString(data, "room", { required: false, defaultValue: "" }),
-      classTeacherId: teacher?.id ?? null,
     });
     const section = await findOrCreateSection(
       classRecord.id,
       getString(data, "section"),
+      { classTeacherId: teacher?.id ?? null },
     );
 
     return {
@@ -1681,7 +1700,8 @@ export const classService = {
     const currentSection = await prisma.section.findUnique({
       where: { id },
       include: {
-        class: { include: { classTeacher: { include: { user: true } } } },
+        class: true,
+        classTeacher: { include: { user: true } },
       },
     });
 
@@ -1692,7 +1712,7 @@ export const classService = {
     const data = asRecord(input);
     const teacherName = getString(data, "classTeacher", {
       required: false,
-      defaultValue: currentSection.class.classTeacher?.user.name ?? "",
+      defaultValue: currentSection.classTeacher?.user.name ?? "",
     });
     const teacher = teacherName
       ? await findOrCreateTeacherByName(teacherName)
@@ -1713,7 +1733,6 @@ export const classService = {
           required: false,
           defaultValue: currentSection.class.room ?? "",
         }),
-        classTeacherId: teacher?.id ?? null,
       },
     });
 
@@ -1724,6 +1743,10 @@ export const classService = {
           required: false,
           defaultValue: currentSection.name,
         }),
+        classTeacherId: teacher?.id ?? null,
+      },
+      include: {
+        classTeacher: { include: { user: true } },
       },
     });
 
@@ -1731,7 +1754,7 @@ export const classService = {
       id: section.id,
       name: classRecord.name,
       capacity: classRecord.capacity ?? 0,
-      classTeacher: teacher?.user.name ?? "",
+      classTeacher: section.classTeacher?.user.name ?? "",
       room: classRecord.room ?? "",
       section: section.name,
     };
