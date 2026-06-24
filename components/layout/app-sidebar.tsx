@@ -127,7 +127,7 @@ export function AppSidebar({ items, logo, isOpen, onClose }: AppSidebarProps) {
                     : "bg-transparent group-hover:bg-sidebar-foreground/25"
               }`}
             />
-            <Icon className="h-5 w-5 flex-shrink-0" />
+            <Icon className="h-5 w-5 shrink-0" />
             <span className="flex-1 text-left">{item.title}</span>
             <ChevronDown
               className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
@@ -162,7 +162,7 @@ export function AppSidebar({ items, logo, isOpen, onClose }: AppSidebarProps) {
               : "bg-transparent group-hover:bg-sidebar-foreground/25"
           }`}
         />
-        <Icon className="h-5 w-5 flex-shrink-0" />
+        <Icon className="h-5 w-5 shrink-0" />
         <span>{item.title}</span>
       </Link>
     );
